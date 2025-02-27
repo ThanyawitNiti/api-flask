@@ -2,13 +2,23 @@ from flask import Flask,jsonify,request
 from flask_cors import CORS  
 from flask_bcrypt import Bcrypt 
 from flask_sqlalchemy import SQLAlchemy
+import os
+from dotenv import load_dotenv
+
+
 
 app = Flask(__name__)
 CORS(app)
+load_dotenv()
 bcrypt = Bcrypt(app)
 
+DB_USERNAME = os.getenv("DB_USERNAME")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
 # Configure SQLite Database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Thanyawit@localhost:3306/user'
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
