@@ -69,26 +69,19 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    
+    user = User.query.filter_by(username=username).first()
 
-    user = User.get(username)
-
-    if not user or not bcrypt.check_password_hash(user['password'], password):
+    
+    if not user or not bcrypt.check_password_hash(user.password, password):
         return jsonify({"error": "Invalid username or password"}), 401
 
-    return jsonify({"message": "Login successful", "user": {"firstName": user['firstName'], "lastName": user['lastName']}}), 200
-
-@app.route('/user/<username>', methods=['GET'])
-def get_user(username):
-    user = users_db.get(username)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    return jsonify({
-        "firstName": user['firstName'],
-        "lastName": user['lastName'],
-        "username": user['username']
-    }), 200
+    return jsonify({"message": "Login successful", 
+                    "user": {
+                        "firstName": user.first_name,
+                        "lastName": user.last_name
+                             }
+                    }), 200
 
 
 
