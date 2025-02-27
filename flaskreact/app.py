@@ -1,36 +1,96 @@
 from flask import Flask,jsonify,request
 from flask_bcrypt import Bcrypt 
+from flask_sqlalchemy import SQLAlchemy
+
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
+
+# Configure SQLite Database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Thanyawit@localhost:3306/user'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize the Database
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+# Run this once to create the database
+with app.app_context():
+    db.create_all()
+
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
 
 @app.route('/register', methods=['POST'])
 def register():
-    # รับค่าจาก request body (JSON)
+    #  request body (JSON)
     data = request.get_json()
 
-    # ดึงค่าจาก JSON
+    # Json
     first_name = data.get('firstName')
     last_name = data.get('lastName')
     username = data.get('username')
     password = data.get('password')
-    # ตรวจสอบว่ามีค่าครบหรือไม่
+    # validate data
     if not all([first_name, last_name, username, password]):
         return jsonify({"error": "Missing fields"}), 400
     
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    # จำลองการบันทึกข้อมูล (ในกรณีจริงต้องใช้ฐานข้อมูล)
+    # Map Model to data Json
+    user_data = User(
+        first_name= data['firstName'],
+        last_name= data['lastName'],
+        username= data['username'],
+        password= hashed_password    # hash (bcrypt)
+    )
+    db.session.add(user_data)  # Add new user to the session
+    db.session.commit()  # Save to the databas
+
+    #Convert User object to a dictionary before returning
     user_data = {
-        "firstName": first_name,
-        "lastName": last_name,
-        "username": username,
-        "password": hashed_password    # ควรเข้ารหัสก่อนบันทึก (bcrypt)
+        "id": user_data.id,
+        "first_name": user_data.first_name,
+        "last_name": user_data.last_name,
+        "username": user_data.username
     }
 
     return jsonify({"message": "User registered successfully", "user": user_data}), 201
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    user = User.get(username)
+
+    if not user or not bcrypt.check_password_hash(user['password'], password):
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    return jsonify({"message": "Login successful", "user": {"firstName": user['firstName'], "lastName": user['lastName']}}), 200
+
+@app.route('/user/<username>', methods=['GET'])
+def get_user(username):
+    user = users_db.get(username)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "firstName": user['firstName'],
+        "lastName": user['lastName'],
+        "username": user['username']
+    }), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
